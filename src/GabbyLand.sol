@@ -6,6 +6,9 @@ import "contracts/utils/TBA.sol";
 import "contracts/utils/Gabby721.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@story-protocol/protocol-core/contracts/lib/IP.sol";
+import "@story-protocol/protocol-core/contracts/registries/IPAssetRegistry.sol";
+import "@story-protocol/protocol-core/contracts/resolvers/IPResolver.sol";
 
 contract GabbyLand is Gabby721, Minter {
     using Counters for Counters.Counter;
@@ -13,6 +16,8 @@ contract GabbyLand is Gabby721, Minter {
     Counters.Counter private _counts;
 
     IERC721 public masterpiece;
+    IPAssetRegistry public ipaRegistry;
+    IPResolver public ipResolver;
 
     struct Land {
         uint256 location;
@@ -34,8 +39,16 @@ contract GabbyLand is Gabby721, Minter {
     mapping(uint256 => Land) public landInfoes;
     mapping(uint256 => Guard) public landGuard;
 
-    constructor(string memory name_, string memory symbol_, string memory baseURI_) Gabby721(name_, symbol_, baseURI_) {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        string memory baseURI_,
+        address ipaRegistryAddress,
+        address ipResolverAddress
+    ) Gabby721(name_, symbol_, baseURI_) {
         setSuperMinter(_msgSender());
+        ipaRegistry = IPAssetRegistry(ipaRegistryAddress);
+        ipResolver = IPResolver(ipResolverAddress);
     }
 
     event Mint(address account, uint256 tokenId, uint256 position, string name, string description);
@@ -52,7 +65,7 @@ contract GabbyLand is Gabby721, Minter {
         return result;
     }
 
-    function mint(address to_, uint256 location_, uint256 index_, uint256 masterpieceId_, address guard_, string memory style_, string memory description_) public onlyMinter(1) returns (uint256) {
+    function mint(address to_, uint256 location_, uint256 index_, uint256 masterpieceId_, address guard_, string memory style_, string memory description_, string memory ipData) public onlyMinter(1) returns (uint256) {
         _counts.increment();
         uint256 count = _counts.current();
 
@@ -71,6 +84,9 @@ contract GabbyLand is Gabby721, Minter {
         }
 
         _mint(to_, tokenId);
+
+        // IP registration logic using IPARegistrar functionality
+        ipaRegistry.registerIP(address(this), tokenId, ipData); // Assuming registerIP function exists and matches this signature
 
         return tokenId;
     }
